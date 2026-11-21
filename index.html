@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Far Is Your Monitor?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: plain, curious, public-service; speaks to a non-expert about their own county
+   IDEA: a surveyor's coverage map — where the instruments are, and how far the gaps reach
+   PICTURE: every U.S. county shaded by its distance to the nearest PM2.5 monitor; click one to measure
+   COLOUR and TYPE: deep navy for distance, coral only for pollution readings; Inter Tight + Inter
+   LAYOUT: short title, then the map large with a result card; search above; figures and notes below */
+:root{color-scheme:light dark;
+ --bg:light-dark(#F6F8FB,#0F1520);--ink:light-dark(#1B2433,#E8EDF5);--muted:light-dark(#4E5869,#A7B2C3);
+ --card:light-dark(#FFFFFF,#18202D);--line:light-dark(#D7DFEA,#2C3647);--navy:light-dark(#1F3A68,#9DB8E6);
+ --coral:light-dark(#C8402F,#F08A7B);--edge:light-dark(#F6F8FB,#0F1520);
+ --d0:light-dark(#EAF0F8,#1D2738);--d1:light-dark(#C4D3EA,#2B4167);--d2:light-dark(#8FA9D3,#3F5F95);--d3:light-dark(#5677B1,#6D8FCB);--d4:light-dark(#1F3A68,#B8CDF2);
+ --has:light-dark(#9DB4D6,#3D5A88);--none:light-dark(#E4EAF2,#1E2635);
+ --z0:light-dark(#6FA3D8,#7FB0E6);--z1:light-dark(#F0A595,#F4B3A5);--z2:light-dark(#D2493A,#F07462)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(24px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font:800 clamp(32px,5vw,52px)/1.05 "Inter Tight",Inter,sans-serif;margin:0 0 12px;text-wrap:balance;letter-spacing:-.02em;color:var(--navy)}
+.lede{max-width:66ch;margin:0;color:var(--muted);font-size:17px}
+.tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:24px 0 14px}
+.search{flex:1 1 320px;display:flex;gap:8px}
+.search input{flex:1;font:16px Inter,sans-serif;padding:10px 14px;min-height:44px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+button{font:600 15px Inter,sans-serif;min-height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button[aria-pressed=true]{background:var(--navy);color:var(--bg);border-color:var(--navy)}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.stage{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.map{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px}
+.map svg{display:block;width:100%;height:auto}
+.map path.c{stroke:var(--edge);stroke-width:.35;cursor:pointer}
+.map path.c:hover{stroke:var(--coral);stroke-width:1.2}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;padding:6px 9px;border-radius:7px;white-space:nowrap;opacity:0;transition:opacity .12s}
+.legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:14px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:22px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend b{color:var(--ink);font-weight:600;margin-right:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card h2{font:700 24px/1.15 "Inter Tight",Inter,sans-serif;margin:0 0 4px;color:var(--ink)}
+.card .st{color:var(--muted);margin:0 0 16px}
+.big{font:800 clamp(44px,6vw,64px)/1 "Inter Tight",Inter,sans-serif;color:var(--navy);white-space:nowrap}
+.big small{font-size:22px;font-weight:700;margin-left:6px}
+.card p{margin:8px 0}
+.rank{font-weight:600}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;font-size:14px;color:#1B2433}
+.reading{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.reading .val{font:700 28px/1.1 "Inter Tight",Inter,sans-serif;color:var(--coral);white-space:nowrap}
+.figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;border-top:1px solid var(--line);padding-top:28px}
+.figs div{font-size:15px;color:var(--muted)}
+.figs strong{display:block;font:800 clamp(30px,4vw,44px)/1.05 "Inter Tight",Inter,sans-serif;color:var(--navy);margin-bottom:6px;white-space:nowrap}
+.figs .hot strong{color:var(--coral)}
+.notes{font-size:14px;color:var(--muted);max-width:80ch}
+.notes a{color:var(--navy)}
+@media(max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}.figs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.figs{grid-template-columns:minmax(0,1fr)}.map{padding:4px;border-radius:12px}}
+@media(prefers-reduced-motion:no-preference){#route{stroke-dasharray:5 5;animation:dash 1.2s linear infinite}@keyframes dash{to{stroke-dashoffset:-20}}}
+</style>
+</head>
+<body>
+<header class="band" style="padding-bottom:0">
+ <div class="wrap">
+  <h1>How far is your nearest air monitor?</h1>
+  <p class="lede">We mapped all 876 monitors in our 2008 data on fine particle pollution (PM2.5). Pick any county to see how far its center is from the closest one, and what that monitor read.</p>
+  <div class="tools">
+   <form class="search" id="f" role="search">
+    <label for="q" style="position:absolute;left:-9999px">Find a county</label>
+    <input id="q" list="names" placeholder="Type a county, e.g. Travis County, Texas" autocomplete="off">
+    <datalist id="names"></datalist>
+    <button type="submit">Find</button>
+   </form>
+   <div class="seg" role="group" aria-label="Map view">
+    <button id="m-dist" aria-pressed="true" type="button">Distance to a monitor</button>
+    <button id="m-cov" aria-pressed="false" type="button">Monitors and readings</button>
+   </div>
+  </div>
+ </div>
+</header>
+
+<main class="band" style="padding-top:0">
+ <div class="wrap">
+  <div class="stage">
+   <div>
+    <div class="map" id="map"><p style="padding:40px;color:var(--muted)">Loading the map…</p></div>
+    <div class="legend" id="legend"></div>
+   </div>
+   <aside class="card" id="card" aria-live="polite"></aside>
+  </div>
+ </div>
+</main>
+
+<section class="band" style="padding-top:8px">
+ <div class="wrap">
+  <div class="figs" id="figs"></div>
+ </div>
+</section>
+
+<footer class="band" style="padding-top:0">
+ <div class="wrap notes">
+  <p><strong>About these numbers.</strong> Monitor locations and yearly averages come from the 876 monitors in our COGS 137 case study dataset (2008, lower 48 states and DC). That dataset may not include every monitor operating in 2008. Distances are straight-line miles from each county's geographic center to the nearest monitor in the dataset, so people at a county's edge may live closer or farther. Limits shown: U.S. EPA annual standard of 9 µg/m³ (2024) and WHO guideline of 5 µg/m³ (2021). This is not live air quality.</p>
+  <p>Want today's reading? Enter your ZIP code at <a href="https://www.airnow.gov">airnow.gov</a>.</p>
+  <p>COGS 137 · Case Study 02 · Chengwei Cao, Ran Yao, Xiao Du, Yanbing Yao, Yuchen Xu</p>
+ </div>
+</footer>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const BINS=[[10,'--d0','Under 10 mi'],[25,'--d1','10–25 mi'],[50,'--d2','25–50 mi'],[100,'--d3','50–100 mi'],[1e9,'--d4','Over 100 mi']];
+const zone=v=>v<5?{k:'--z0',t:"under the WHO's guideline of 5"}:v<=9?{k:'--z1',t:"within today's U.S. limit of 9"}:{k:'--z2',t:"above today's U.S. limit of 9"};
+const binVar=mi=>BINS.find(b=>mi<b[0])[1];
+let D,mode='dist',sel=-1,sortedMi=[];
+const place=m=>m.c&&m.c!=='Not in a city'?`${m.c}, ${m.s}`:`a site in ${m.co} County, ${m.s}`;
+const label=c=>`${c.n} County, ${c.s}`;
+
+function drawMap(){
+ const cs=D.counties.map((c,i)=>`<path class="c" data-i="${i}" d="${c.d}"></path>`).join('');
+ $('#map').innerHTML=`<svg viewBox="0 0 975 610" role="img" aria-label="Map of U.S. counties shaded by distance to the nearest PM2.5 monitor">
+  <g id="cs">${cs}</g>
+  <path d="${D.stateMesh}" fill="none" stroke="var(--edge)" stroke-width="1.2"/>
+  <g id="dots"></g>
+  <g id="sel"></g>
+ </svg><div class="tip" id="tip"></div>`;
+ const svg=$('#map svg'),tip=$('#tip');
+ svg.addEventListener('click',e=>{const i=e.target.dataset?.i;if(i!==undefined)select(+i)});
+ svg.addEventListener('mousemove',e=>{const i=e.target.dataset?.i;if(i===undefined){tip.style.opacity=0;return}
+  const c=D.counties[i],r=$('#map').getBoundingClientRect();
+  tip.textContent=`${label(c)} · ${c.k?c.k+' monitor'+(c.k>1?'s':''):c.mi+' mi to nearest'}`;
+  tip.style.left=Math.min(e.clientX-r.left+12,r.width-tip.offsetWidth-6)+'px';tip.style.top=(e.clientY-r.top+14)+'px';tip.style.opacity=1});
+ svg.addEventListener('mouseleave',()=>tip.style.opacity=0);
+ paint();
+}
+function paint(){
+ const paths=document.querySelectorAll('#cs path');
+ paths.forEach((p,i)=>{const c=D.counties[i];p.setAttribute('fill',`var(${mode==='dist'?binVar(c.mi):(c.k?'--has':'--none')})`)});
+ const r=mode==='dist'?1.6:2.6;
+ $('#dots').innerHTML=D.monitors.map(m=>`<circle cx="${m.x}" cy="${m.y}" r="${r}" fill="${mode==='dist'?'var(--card)':`var(${zone(m.v).k})`}" stroke="var(--navy)" stroke-width="${mode==='dist'?.6:.5}"/>`).join('');
+ $('#legend').innerHTML=mode==='dist'
+  ?'<b>County center to nearest monitor:</b>'+BINS.map(b=>`<span><i style="background:var(${b[1]})"></i>${b[2]}</span>`).join('')+'<span><i style="background:var(--card);border:1px solid var(--navy);width:10px;height:10px;border-radius:50%"></i>Monitor</span>'
+  :'<b>Counties:</b><span><i style="background:var(--has)"></i>Has a monitor</span><span><i style="background:var(--none);border:1px solid var(--line)"></i>No monitor</span><b style="margin-left:8px">2008 reading:</b><span><i style="background:var(--z0)"></i>Under 5</span><span><i style="background:var(--z1)"></i>5 to 9</span><span><i style="background:var(--z2)"></i>Over 9</span>';
+}
+function select(i){
+ sel=i;const c=D.counties[i],m=D.monitors[c.m],z=zone(m.v);
+ const closer=sortedMi.filter(x=>x<c.mi).length,pct=Math.round(100*closer/sortedMi.length);
+ $('#sel').innerHTML=`<path d="${c.d}" fill="none" stroke="var(--coral)" stroke-width="2.2"/>
+  <line id="route" x1="${c.cx}" y1="${c.cy}" x2="${m.x}" y2="${m.y}" stroke="var(--coral)" stroke-width="2"/>
+  <circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="var(--coral)"/>
+  <circle cx="${m.x}" cy="${m.y}" r="6" fill="none" stroke="var(--coral)" stroke-width="2"/>`;
+ $('#card').innerHTML=`<h2>${label(c)}</h2>
+  <p class="st">${c.k?`Has ${c.k} monitor${c.k>1?'s':''} in our data.`:'No monitor in our data.'}</p>
+  <div class="big">${c.mi}<small>miles</small></div>
+  <p>from the county's center to the nearest monitor, at ${place(m)}.</p>
+  <p class="rank">${closer>=sortedMi.length-1?'The farthest county from a monitor in our data.':pct<1?'Among the closest counties to a monitor.':`Farther than ${pct}% of U.S. counties.`}</p>
+  <div class="reading"><div class="val">${m.v} µg/m³</div>
+  <p>That monitor's 2008 yearly average, <span class="chip" style="background:var(${z.k})">${z.t}</span></p></div>`;
+ $('#q').value=label(c);
+}
+function find(text){
+ const t=text.trim().toLowerCase().replace(/\s+county\b/,'');if(!t)return;
+ let i=D.counties.findIndex(c=>label(c).toLowerCase()===text.trim().toLowerCase());
+ if(i<0)i=D.counties.findIndex(c=>(c.n+', '+c.s).toLowerCase().startsWith(t));
+ if(i<0)i=D.counties.findIndex(c=>c.n.toLowerCase().startsWith(t.split(',')[0]));
+ if(i>=0)select(i);else $('#card').insertAdjacentHTML('afterbegin','<p class="st" style="color:var(--coral)">No county matched that. Try “Name County, State”.</p>');
+}
+function figs(){
+ const s=D.stats,f=n=>n.toLocaleString('en-US');
+ $('#figs').innerHTML=`<div><strong>${f(s.withMon)} of ${f(s.counties)}</strong>counties have a monitor in our 2008 data. The other ${f(s.counties-s.withMon)} are blind spots.</div>
+  <div><strong>${s.medianAll} mi</strong>from the typical county's center to its nearest monitor.</div>
+  <div><strong>${f(s.over50)}</strong>counties sit more than 50 miles from one. The farthest is ${s.maxMi} miles away.</div>
+  <div class="hot"><strong>${Math.round(100*s.above9/s.monitors)}%</strong>of the monitors read above today's U.S. limit of 9 µg/m³ in 2008.</div>`;
+}
+function setMode(m){mode=m;$('#m-dist').setAttribute('aria-pressed',m==='dist');$('#m-cov').setAttribute('aria-pressed',m==='cov');paint()}
+$('#m-dist').addEventListener('click',()=>setMode('dist'));
+$('#m-cov').addEventListener('click',()=>setMode('cov'));
+$('#f').addEventListener('submit',e=>{e.preventDefault();find($('#q').value)});
+$('#q').addEventListener('change',e=>{if(D&&D.counties.some(c=>label(c)===e.target.value))find(e.target.value)});
+fetch('data.json').then(r=>r.json()).then(d=>{
+ D=d;sortedMi=D.counties.map(c=>c.mi).sort((a,b)=>a-b);
+ $('#names').innerHTML=D.counties.map(c=>`<option value="${label(c)}"></option>`).join('');
+ drawMap();figs();
+ let start=D.counties.reduce((b,c,i)=>c.mi>D.counties[b].mi?i:b,0);
+ select(start);
+}).catch(()=>{$('#map').innerHTML='<p style="padding:40px">The map data did not load. Try reloading the page.</p>'});
+}
+</script>
+</body>
+</html>
